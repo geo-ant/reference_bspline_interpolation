@@ -20,7 +20,8 @@ struct Args {
 };
 
 static void show_usage(char const *appname);
-static bool read_f32(std::filesystem::path path, std::vector<double> &out);
+static bool read_f64(std::filesystem::path path, std::vector<double> &out);
+static bool write_f64(std::filesystem::path path, std::span<double const> data);
 static bool parse_args(int argc, char const *const *argv, Args &out_args);
 
 int main(int argc, char const *const *argv) {
@@ -31,11 +32,20 @@ int main(int argc, char const *const *argv) {
   }
 
   std::vector<double> data;
-  if (!read_f32(args.file, data)) {
+  if (!read_f64(args.file, data)) {
     return -1;
   }
 
   splinter_expfilter(data.data(), 1, data.size(), args.extension, args.alpha, args.n_trunc);
+
+  std::filesystem::path const out = [args](){
+    auto temp(args.file);
+    temp.replace_extension("filtered.f64");
+    return temp;
+  }();
+  
+  write_f64(out, data);
+  std::cout << std::format("written to: '{}'\n",out.string());
 
   return 0;
 }
@@ -46,16 +56,17 @@ static bool parse_args(int argc, char const *const *argv, Args &out_args) {
     return -1;
   }
 
-  std::underlying_type_t<BoundaryExt> const ext_val = std::stoi(argv[1]);
+  using BoundaryExtUnderlying = std::underlying_type_t<BoundaryExt>;
+  BoundaryExtUnderlying const ext_val = std::stoi(argv[1]);
   BoundaryExt extension;
 
-  switch (ext_val) {
-  BOUNDARY_PERIODIC: { extension = BOUNDARY_PERIODIC; } break;
-  BOUNDARY_WSYMMETRIC: { extension = BOUNDARY_WSYMMETRIC; } break;
-  BOUNDARY_CONSTANT: { extension = BOUNDARY_CONSTANT; } break;
-  BOUNDARY_HSYMMETRIC: { extension = BOUNDARY_HSYMMETRIC; } break;
+  switch (static_cast<BoundaryExtUnderlying>(ext_val)) {
+    case BOUNDARY_PERIODIC: { extension = BOUNDARY_PERIODIC; } break;
+    case BOUNDARY_WSYMMETRIC: { extension = BOUNDARY_WSYMMETRIC; } break;
+    case BOUNDARY_CONSTANT: { extension = BOUNDARY_CONSTANT; } break;
+    case BOUNDARY_HSYMMETRIC: { extension = BOUNDARY_HSYMMETRIC; } break;
   default: {
-    std::cerr << "illegal value for boundary extension" << std::endl;
+    std::cerr << "Illegal value for boundary extension" << std::endl;
     return false;
   }
   }
@@ -103,7 +114,7 @@ static void show_usage(char const *appname) {
       std::to_underlying(BoundaryExt::BOUNDARY_PERIODIC));
 }
 
-static bool read_f32(std::filesystem::path path, std::vector<double> &out) {
+static bool read_f64(std::filesystem::path path, std::vector<double> &out) {
   try {
     std::ifstream file(path);
     file.seekg(0, std::ios::end);
@@ -125,4 +136,42 @@ static bool read_f32(std::filesystem::path path, std::vector<double> &out) {
     std::cerr << "Error: " << e.what() << std::endl;
     return false;
   }
+}
+
+#include <cstddef>
+#include <filesystem>
+#include <fstream>
+#include <limits>
+#include <span>
+
+static bool write_f64(std::filesystem::path path,
+                      std::span<double const> data)
+{
+    std::ofstream file(path, std::ios::binary | std::ios::trunc);
+    if (!file)
+        return false;
+
+    const auto bytes = std::as_bytes(data);
+    std::size_t offset = 0;
+
+    constexpr auto max_write =
+        static_cast<std::size_t>(
+            std::numeric_limits<std::streamsize>::max());
+
+    while (offset < bytes.size()) {
+        const std::size_t remaining = bytes.size() - offset;
+        const auto count = static_cast<std::streamsize>(
+            remaining < max_write ? remaining : max_write);
+
+        file.write(
+            reinterpret_cast<char const*>(bytes.data() + offset),
+            count);
+
+        if (!file)
+            return false;
+
+        offset += static_cast<std::size_t>(count);
+    }
+
+    return true;
 }

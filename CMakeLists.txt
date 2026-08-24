@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.13)
 project(Splinter LANGUAGES C CXX)
 
 # Enable C99
-set(CMAKE_C_STANDARD 99)
+set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 23 REQUIRED)
 set(CMAKE_EXPORT_COMPILE_COMMANDS On)
 
