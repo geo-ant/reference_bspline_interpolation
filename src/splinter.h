@@ -50,10 +50,20 @@ typedef struct {
     double *xBuf, *yBuf; ///< buffers for computation (internal usage)
 } splinter_plan_t;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 splinter_plan_t splinter_plan(const double* in, int w, int h, int c,
                               int order, BoundaryExt e, double eps, int larger);
 void splinter_destroy_plan(splinter_plan_t plan);
 
 void splinter(double* out, double x, double y, splinter_plan_t plan);
+
+// expose the exponential filtering method directly
+void splinter_expfilter(double *data, int step, int n,
+                      BoundaryExt boundary, double alpha, int n0);
+#ifdef __cplusplus
+}
+#endif
 
 #endif

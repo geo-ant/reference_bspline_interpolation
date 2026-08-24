@@ -191,6 +191,11 @@ static void expFilter(double *data, int step, int n,
     }
 }
 
+void splinter_expfilter(double *data, int step, int n, BoundaryExt boundary, double alpha, int n0) {
+    expFilter(data, step, n, boundary, alpha, n0);
+}
+
+
 /// \brief Apply a cascade of exponential filters to an image
 /// \details This is Algorithm 5 in the IPOL article.
 /// \param data the image data

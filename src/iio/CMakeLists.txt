@@ -8,11 +8,9 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}")
 #
 #
 add_library(IIOLIB iio.h iio.c)
+set_property(TARGET IIOLIB PROPERTY COMPILE_WARNING_AS_ERROR ON)
 set_target_properties(IIOLIB PROPERTIES
   INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}")
-if(CMAKE_CXX_COMPILER_ID MATCHES "(GNU)|(CLANG)")
-   target_compile_options(IIOLIB PRIVATE "-Wall -Wextra")
-endif()
 if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
    target_compile_definitions(IIOLIB PRIVATE I_CAN_HAS_LINUX)
 endif()
