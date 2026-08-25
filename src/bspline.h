@@ -46,6 +46,10 @@ struct Bspline_s {
     double (*eval)(double x, const Bspline* self); ///< Evaluation function
 };
 
+#ifdef __cplusplus
+
+extern "C" {
+#endif
 void compute_bspline_poly(double* C, int n);
 void compute_ztrans_coeff(double* ztransCoeff, int n);
 void compute_poles(double* poles, const double* ztransCoeff, int n);
@@ -54,5 +58,9 @@ void compute_mu(double* mu, const double* poles, int tn);
 void compute_truncation(int* trunc, const double* poles, int tn, double eps);
 
 void get_bspline(int n, prefilter_t* p, Bspline* s);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

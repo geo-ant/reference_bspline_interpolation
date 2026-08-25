@@ -113,8 +113,9 @@ static bool parse_args(int argc, char const *const *argv, Args &out_args) {
   return true;
 }
 
-static void show_usage(char const *appname) {
+static void show_usage(char const * const appname) {
   std::cout << std::format(
+      "Apply the exponential filter for pole alpha to float64 data\n\n"
       "Usage\n"
       "{} <boundary> <N_trunc> <alpha> <file>\n"
       "\n"

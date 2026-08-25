@@ -27,6 +27,7 @@
 #include <math.h>
 #include <assert.h>
 #include "bspline.h"
+#include "util.h"
 
 #ifdef GSL_SUPPORT
 #include <gsl/gsl_poly.h>
@@ -278,7 +279,7 @@ void compute_mu(double* mu, const double* poles, int tn) {
 /// \param poles poles of the spline
 /// \param tn tilde n (\f$\tilde n\f$), number of poles
 /// \param eps desired precision level
-void compute_truncation(int* trunc, const double* poles, int tn, double eps) {
+EXTERN_C void compute_truncation(int* trunc, const double* poles, int tn, double eps) {
     // weight computations
     double *mu = malloc(tn * sizeof * mu);
     compute_mu(mu, poles, tn);

@@ -23,10 +23,12 @@
  */
 
 #include "splinter.h"
+#include "util.h"
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>
 #include <math.h>
+
 
 // ********************** boundary condition **********************************
 
@@ -191,7 +193,7 @@ static void expFilter(double *data, int step, int n,
     }
 }
 
-void splinter_expfilter(double *data, int step, int n, BoundaryExt boundary, double alpha, int n0) {
+EXTERN_C void splinter_expfilter(double *data, int step, int n, BoundaryExt boundary, double alpha, int n0) {
     expFilter(data, step, n, boundary, alpha, n0);
 }
 

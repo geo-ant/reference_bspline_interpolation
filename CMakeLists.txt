@@ -7,6 +7,7 @@ set(CMAKE_CXX_STANDARD 23 REQUIRED)
 set(CMAKE_EXPORT_COMPILE_COMMANDS On)
 
 option(EXTRAPOLATE "Extrapolate for pixels outside image" OFF)
+option(SPLINTER_LIB_ONLY "build the library only and omit the executables" OFF)
 
 set(GSL_FIND_QUIETLY TRUE)
 find_package(GSL)
@@ -26,22 +27,22 @@ if(EXTRAPOLATE)
   target_compile_definitions(Splinter PRIVATE EXTRAPOLATE)
 endif()
 
-add_executable(bspline src/bspline_main.c src/splinter_transform.c src/homography_tools.c)
-target_link_libraries(bspline PRIVATE IIOLIB Splinter)
-
-# there's an error in here...
-add_executable(hom4p src/hom4p.c src/homography_tools.c)
-target_link_libraries(hom4p PRIVATE m)
-
-# (e)xponential (f)ilter (i)n (p)lace
-add_executable(efip src/efip_main.cpp)
-target_link_libraries(efip PUBLIC Splinter)
-
-# if(CMAKE_CXX_COMPILER_ID MATCHES "(GNU)|(CLANG)")
-#   target_compile_options(Splinter "-Wall -Wextra")
-#   target_compile_options(bspline "-Wall -Wextra")
-#   target_compile_options(hom4p "-Wall -Wextra")
-# endif()
+if (NOT SPLINTER_LIB_ONLY)
+  add_executable(bspline src/bspline_main.c src/splinter_transform.c src/homography_tools.c)
+  target_link_libraries(bspline PRIVATE IIOLIB Splinter)
+  
+  # there's an error in here...
+  add_executable(hom4p src/hom4p.c src/homography_tools.c)
+  target_link_libraries(hom4p PRIVATE m)
+  
+  # (e)xponential (f)ilter (i)n (p)lace
+  add_executable(efip src/efip_main.cpp)
+  target_link_libraries(efip PUBLIC Splinter)
+  
+  # calculate the truncation index
+  add_executable(calc_truncn src/calc_truncn_main.cpp)
+  target_link_libraries(calc_truncn PUBLIC Splinter)
+endif()
 
 if(GSL_FOUND)
   add_executable (compute_bspline compute_bspline.c bspline.c bspline.h)
