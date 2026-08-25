@@ -93,7 +93,7 @@ static bool parse_args(int argc, char const *const *argv, Args &out_args) {
     return false;
   }
 
-  double const alpha = std::stof(argv[3]);
+  double const alpha = std::stod(argv[3]);
   if (alpha >= 0 || alpha <= -1) {
     std::cerr << "alpha must be in (-1,0)" << std::endl;
     return false;
