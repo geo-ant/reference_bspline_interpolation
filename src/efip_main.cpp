@@ -29,7 +29,7 @@ static bool write_f64(std::filesystem::path path, std::span<double const> data);
 static bool parse_args(int argc, char const *const *argv, Args &out_args);
 static char const *to_cstr(BoundaryExt ext);
 
-int main(int argc, char const *const *argv) {
+int main(int const argc, char const *const * const argv) {
 
   Args args;
   if (!parse_args(argc, argv, args)) {
