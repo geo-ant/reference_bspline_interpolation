@@ -28,7 +28,7 @@
 #include "bspline.h"
 
 /// Boundary extension method used in prefiltering
-typedef enum {
+typedef enum :int {
     BOUNDARY_CONSTANT = 0,   ///< constant value
     BOUNDARY_HSYMMETRIC = 1, ///< half-symmetric
     BOUNDARY_WSYMMETRIC = 2, ///< whole-symmetric

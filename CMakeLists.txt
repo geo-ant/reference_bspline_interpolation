@@ -49,3 +49,9 @@ if(GSL_FOUND)
   target_compile_definitions(compute_bspline PRIVATE GSL_SUPPORT)
   target_link_libraries(compute_bspline PRIVATE GSL::gsl m)
 endif()
+
+install(TARGETS Splinter
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+)
+install(FILES src/bspline.h src/splinter.h DESTINATION include)
