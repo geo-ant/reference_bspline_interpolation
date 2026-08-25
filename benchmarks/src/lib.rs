@@ -17,11 +17,11 @@ impl BoundaryExtension {
 #[inline(always)]
 pub fn apply_expfilter(
     data: &mut [f64],
-    stride: u16,
-    count: u16,
+    stride: c_int,
+    count: c_int,
     extension: BoundaryExtension,
     alpha: f64,
-    n_trunc: u16,
+    n_trunc: c_int,
 ) {
     unsafe {
         bindings::splinter_expfilter(
