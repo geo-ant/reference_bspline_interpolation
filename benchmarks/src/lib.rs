@@ -1,6 +1,5 @@
-use std::ffi::c_int;
-
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[repr(u8)]
 pub enum BoundaryExtension {
     Constant = 0,
     Hsymmetric = 1,
@@ -8,43 +7,36 @@ pub enum BoundaryExtension {
     Periodic = 3,
 }
 
-impl BoundaryExtension {
-    fn to_c_int(self) -> c_int {
-        self as _
-    }
-}
-
 #[inline(always)]
 pub fn apply_expfilter(
     data: &mut [f64],
-    stride: c_int,
-    count: c_int,
+    stride: u32,
+    count: u32,
     extension: BoundaryExtension,
     alpha: f64,
-    n_trunc: c_int,
+    n_trunc: u32,
 ) {
     unsafe {
         bindings::splinter_expfilter(
             data.as_mut_ptr(),
-            stride as _,
-            count as _,
-            extension.to_c_int(),
+            stride,
+            count,
+            extension as _,
             alpha,
-            n_trunc as _,
+            n_trunc,
         );
     }
 }
 
 mod bindings {
-    use std::ffi::c_int;
     unsafe extern "C" {
         pub fn splinter_expfilter(
             data: *mut f64,
-            step: c_int,
-            n: c_int,
-            extension: c_int,
+            step: u32,
+            n: u32,
+            extension: u8,
             alpha: f64,
-            n0: c_int,
+            n0: u32,
         );
     }
 }

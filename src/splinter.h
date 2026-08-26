@@ -26,9 +26,10 @@
 #define SPLINTER_H
 
 #include "bspline.h"
+#include <stdint.h>
 
 /// Boundary extension method used in prefiltering
-typedef enum :int {
+typedef enum : uint8_t {
     BOUNDARY_CONSTANT = 0,   ///< constant value
     BOUNDARY_HSYMMETRIC = 1, ///< half-symmetric
     BOUNDARY_WSYMMETRIC = 2, ///< whole-symmetric
@@ -60,8 +61,8 @@ void splinter_destroy_plan(splinter_plan_t plan);
 void splinter(double* out, double x, double y, splinter_plan_t plan);
 
 // expose the exponential filtering method directly
-void splinter_expfilter(double *data, int step, int n,
-                      BoundaryExt boundary, double alpha, int n0);
+void splinter_expfilter(double *data, uint32_t step, uint32_t n,
+                      BoundaryExt boundary, double alpha, uint32_t n0);
 #ifdef __cplusplus
 }
 #endif

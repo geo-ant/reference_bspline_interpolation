@@ -24,6 +24,7 @@
 
 #include "splinter.h"
 #include "util.h"
+#include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -115,16 +116,19 @@ static int (*ExtensionMethod[4])(int, int) =
 /// is exact for constant extension.  Note, however, that for constant extension
 /// the infinite grid result is not exactly constant beyond the boundaries
 /// (rather it decays to constant).
-static void expFilter(double *data, int step, int n,
-                      BoundaryExt boundary, double alpha, int n0) {
+static void expFilter(double * const data, uint32_t const step, uint32_t const n,
+                      BoundaryExt const boundary, double const alpha, int64_t n0) {
     double powAlpha=1, last=data[0];
 
+    if (n == 0) {
+        return;
+    }
     // avoid too large initialization
     if(n0 > n)
         n0 = n;
     if(n0 == n && boundary == BOUNDARY_WSYMMETRIC)
         n0 = n-1;
-    int i, iEnd=n0*step;
+    uint32_t i, iEnd=n0*step;
     // Causal init
     switch(boundary) {
     case BOUNDARY_CONSTANT:
@@ -187,13 +191,13 @@ static void expFilter(double *data, int step, int n,
         break;
     }
     // Anti-causal filter
-    for(i=iEnd-step; i>=0; i-=step) {
+    for(i=iEnd-step; i-- > 0;) { // NOTE(geo): the original code would underflow with signed integers, so we do this instead. Same semantics as original.
         data[i] = alpha*(last - data[i]);
         last = data[i];
     }
 }
 
-EXTERN_C void splinter_expfilter(double *data, int step, int n, BoundaryExt boundary, double alpha, int n0) {
+EXTERN_C void splinter_expfilter(double *data, uint32_t step, uint32_t n, BoundaryExt boundary, double alpha, uint32_t n0) {
     expFilter(data, step, n, boundary, alpha, n0);
 }
 

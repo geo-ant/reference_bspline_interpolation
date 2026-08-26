@@ -1,13 +1,11 @@
-use std::ffi::c_int;
-
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
-use interpn::multibspline::regular::{MultiBsplineRegular, coefficients};
+use interpn::multibspline::regular::{MultiBsplineRegular, coefficients, coefficients_par};
 use rand::{Rng, SeedableRng, distributions::Uniform, rngs::StdRng};
 
 use benchmarks::{BoundaryExtension, apply_expfilter};
 
 // stride = 1, varying number of samples
-const SIZES: [c_int; 6] = [64, 256, 1024, 4096, 16384, 65535];
+const SIZES: [u32; 6] = [64, 256, 1024, 4096, 16384, 65535];
 
 /// Generate one buffer at the largest size; each benchmark uses a prefix,
 /// so every size sees the same data (truncated to the relevant length).
@@ -31,7 +29,7 @@ fn bench_expfilter(c: &mut Criterion) {
 
         // n_trunc varies with size: powers of 10 from 1 up to n/10
         // e.g. for n = 1024 -> [1, 10, 100]
-        let mut n_trunc = 1 as c_int;
+        let mut n_trunc = 1;
         while n_trunc * 10 <= n / 10 {
             n_trunc *= 10;
         }
@@ -94,7 +92,8 @@ fn bench_interpn_coeffs(c: &mut Criterion) {
         let mut scratch = vec![0.0; MultiBsplineRegular::<f64, 1>::construction_scratch_len(dims)];
 
         group.bench_with_input(BenchmarkId::from_parameter(n), &data, |b, data| {
-            b.iter(|| coefficients(dims, data, &mut coeffs, &mut scratch).unwrap());
+            // b.iter(|| coefficients(dims, data, &mut coeffs, &mut scratch).unwrap());
+            b.iter(|| coefficients_par(dims, data, &mut coeffs, &mut scratch, 4).unwrap());
         });
     }
 
