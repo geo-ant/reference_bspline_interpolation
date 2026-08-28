@@ -61,8 +61,8 @@ void splinter_destroy_plan(splinter_plan_t plan);
 void splinter(double* out, double x, double y, splinter_plan_t plan);
 
 // expose the exponential filtering method directly
-void splinter_expfilter(double *data, uint32_t step, uint32_t n,
-                      BoundaryExt boundary, double alpha, uint32_t n0);
+void splinter_expfilter(double *data, int32_t step, int32_t n,
+                      BoundaryExt boundary, double alpha, int32_t n0);
 #ifdef __cplusplus
 }
 #endif

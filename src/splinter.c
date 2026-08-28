@@ -116,19 +116,23 @@ static int (*ExtensionMethod[4])(int, int) =
 /// is exact for constant extension.  Note, however, that for constant extension
 /// the infinite grid result is not exactly constant beyond the boundaries
 /// (rather it decays to constant).
-static void expFilter(double * const data, uint32_t const step, uint32_t const n,
-                      BoundaryExt const boundary, double const alpha, int64_t n0) {
+// NOTE PERF(geo):
+// Here's the link to the godbolt of this function with O3 and -march=<my processor>
+// https://godbolt.org/#z:OYLghAFBqd5QCxAYwPYBMCmBRdBLAF1QCcAaPECAMzwBtMA7AQwFtMQByARg9KtQYEAysib0QXACx8BBAKoBnTAAUAHpwAMvAFYTStJg1DIApACYAQuYukl9ZATwDKjdAGFUtAK4sGIMxqkrgAyeAyYAHI%2BAEaYxCAArADspAAOqAqETgwe3r7%2BgemZjgKh4VEssfHJtpj2JQxCBEzEBLk%2BfgG19dlNLQRlkTFxiSkKza3t%2BV3j/YMVVaMAlLaoXsTI7BzmAMxhyN5YANQmO27I4/iCp9gmGgCCu/uHmCdnogpKrTd3jw8EAE9UpgsFQjowfEcQEcvGECAAOAD6BBOSSsDyOmKOFgA8nIIgARe4AJQAmoi3DiIkIACr3CI0t4Eo6BLEAeg5pzcRzQDFmgiOADcxF5ML8sdi8YSSeSABJCUkAWUV2BpxIAktzTsyuKQjhy2VyjggxFQALQKAEsNgEYh4UwYrG4/FEsmIgDqCuVqo1Wp2zLMeoNRoA7ghPJgLVabXaHfcJc7pW7lNgNTiCZqmUcdhLg2cjsC7Rh7b8TElmRY1gx0C0AdhVARTui/i3foLUHh0ODVKkAGJ0AhxCDoNbRehHABUPIE4yONeaethgh2ZmR075KPGmFSi7hK7XvNnDFI4olZ/P58rXmrtfrKMPKOiVZrxABepHXjHrwfRzEqRNepwgAbJIa4MBoSyos2Eofl%2BBaoCG9y0P%2BTDarqRwGOM2rzqhCQWBoJgJASTalo6mJ4GCEAMEy2ospBZbQRexCYAQ6wMCRZGosRnEcr%2B7adkcRCoBhLTAK8YRZGIeAAF5MA0p7kVQVEaG82BHAwSwKWe4FZuxOyMYpyk0f66knGYQHmEBRxPteL4AsZFZSq65KekqKpqpqmmcRKOm0QwZpcBx8ZYkuBD7iieCAdg1bauBE5bqkQW5myRxuEwXgKGIRwSY2nEKCGhDIAgEA2Ter70WiWkfK8ibORSVK0vSNIgFpEqYSihomVwZp/iaSUXtEzFMAA1v1mLVZKLoyoi8puT6motd5WL8MQEB4NqBH6dlXJ4NF6BNttljaglFUGRemLpIhyEmpOtG9ah%2BmtRe7VmVYJk4YRFjrURE6XUhKFjWeZbccF56DZgI2AxNtXTa53oeW4i2g2eK1rcdg6JVt61nNqu0xVj1jo9up1Peef3XUwt0mfdgPnS9hPvXJuFfYRBK/Qh/19Y9S2YsDpPWUNo3c8j0NOdNKZphmiP86j2MEglB3Y24uN7YrDPyxjJM82e5MoVTzI08L51tUws7q3OTOfQlE7%2Bd9bO61zZ0Snz2vg5DRtYqC6W0AQ0Km18BAQBBB28UI4ZeLQXbhIKcRHMAwkIHEYqu4LgMu8jH14QRRFZu1QVabxaUZVlNA%2B3EWl412tFUQFSzxRjgOy0TmMWNtZyV2rR3%2BidUH85nLM5%2Bb90TnnHvnvTjPNJ9dtp%2BWpHI7x9yCHgZqiMXtDZQwhBaflhXFaVdlayLps1WLbqUtSdIMkj539x3g8mRPzIQMPEBmnfquD5YRwvxTRxmkcLgddh7tSWF5ZG502RQHuv/QBddf4oQnDAgBQDNJjzPG7IWZ1RZTTdLNeGvob4Xg/jFL%2Bb0DYUxHqbRs6CTZm0nsze%2BzIJx3QplA5BcDaZYkwVDE%2Bk0kwuS9O5QhfdLZ4SYa9VhiDR5O09mIr6n9mS0Sfj/e67DKEcNQfzCUU4IAWynuIxRr1fyUJIV2ABCsc5oNkZiHh6CcECMRBLdU6YFqiIMQo0hSiu4UOkdQrhmIVFmNZgE%2BCV09a0UCrQ5aJA0b%2Bk2q3JWcUFYEx8T3Bi2isQO0piw6mFNQl0JRObO%2BrN2bhMdvzdOt95ESOUdQ/W/9DY2IFhDLBWkqnshSkvRwq90qZQ3qXQcxAtJN39JXC0DcsZmgATcFkTZTr6hShEHENJsDQEwKgJY0ICCJyOCQPAwAwhZTQMcEMaxI4wmrHEKgtAEJHAKjso4mRgDhC7HCTAYliAKD1AoYSIZXgjkEggPAChN5biYOgAAdEcIQrBXhKBYIYRwFxfygv2Yc5gtBIXuMYazLMr8XoAJKURax/Mgk1JCeg9OwMOArFoJwBIvA/AcC0KQVAnBlZHW/r89YmwzI7B4KQX2LLaUrGGiAHYOxIWSplbKuVQF9CcEkEyzQvB2UcF4AoEAgRhVaBWHAWASA0AsFSHQOI5BKDGtNfQeIwAuArj4AOOIWqSqqtINEI5r5OCCo9cwV8OJojaEwA4b1vBjVsEEDiBgtAARuqwNELwwA0q0FoFq7gvAsCIqMOIdNpB8DMQcHgGOabWWYFUMGrwg43XvPpbm2geBBq1g8FgN1to8AsFDaQGOxAnxKAJJgLNwB61GFVSsG5TBgAKAAGp4EwCGHEwJmWCv4IIEQYh2BSBkIIRQKh1AitILoXUBgR2mC5TYet0QtWQBWKgVIDQ01mhxDmM0iKNgIG1GILAxADDDUwGq7tdosBXogCsOwwaGguGrFMPwuoQhhCGJUEYuoihZAENBvQKGGjzGGPEXUYHC0CD6JMTwHQ9D4YaERgY8GFhIdsBMNoJH8h4fo9hxDuHQNrA2BuulDKVX7vVUcVQ8IgJmhAnHZAyBAFSrMD/XAhASD8qAbwXVorSDiskAkaVSQACc8IdgJCAjseEkgNCSEkPCRVHBlWkGZay9VmrtVCtHaQA1iAQBrAIKkStFqIBWrNcQCIcLOBCZE2J4AEnAGSEhWYXgIJ5OAb0Cu4QohxCbqSzutQbrD2kBDMQJgqRQ08Y4Iymzbr1U4krV5lEqAwQhdE5IcTkn7XRZ/h4E1/nFNLGU6OsV/guDReE3prgGgzDwnMmYLgSQLO1us7ZtVnAHM6p65ZmLpX%2BMLacyKsBXbnXZBAJIIAA%3D
+// where my particular processor arch is alderlake.
+// and here is the expanded workspace with a focus on rust vs cpp (clang)
+// focussing ONLY on the causal filter:
+// https://godbolt.org/z/hMbhx6fW6
+static void expFilter(double *data, int32_t step, int32_t n,
+                      BoundaryExt boundary, double alpha, int32_t n0) {
     double powAlpha=1, last=data[0];
 
-    if (n == 0) {
-        return;
-    }
     // avoid too large initialization
     if(n0 > n)
         n0 = n;
     if(n0 == n && boundary == BOUNDARY_WSYMMETRIC)
         n0 = n-1;
-    uint32_t i, iEnd=n0*step;
+    int i, iEnd=n0*step;
     // Causal init
     switch(boundary) {
     case BOUNDARY_CONSTANT:
@@ -191,13 +195,13 @@ static void expFilter(double * const data, uint32_t const step, uint32_t const n
         break;
     }
     // Anti-causal filter
-    for(i=iEnd-step; i-- > 0;) { // NOTE(geo): the original code would underflow with signed integers, so we do this instead. Same semantics as original.
+    for(i=iEnd-step; i>=0; i-=step) {
         data[i] = alpha*(last - data[i]);
         last = data[i];
     }
 }
 
-EXTERN_C void splinter_expfilter(double *data, uint32_t step, uint32_t n, BoundaryExt boundary, double alpha, uint32_t n0) {
+EXTERN_C void splinter_expfilter(double *data, int32_t step, int32_t n, BoundaryExt boundary, double alpha, int32_t n0) {
     expFilter(data, step, n, boundary, alpha, n0);
 }
 

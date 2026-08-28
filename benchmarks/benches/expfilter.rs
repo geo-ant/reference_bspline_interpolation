@@ -5,7 +5,7 @@ use rand::{Rng, SeedableRng, distributions::Uniform, rngs::StdRng};
 use benchmarks::{BoundaryExtension, apply_expfilter};
 
 // stride = 1, varying number of samples
-const SIZES: [u32; 6] = [64, 256, 1024, 4096, 16384, 65535];
+const SIZES: [i32; 6] = [64, 256, 1024, 4096, 16384, 65535];
 
 /// Generate one buffer at the largest size; each benchmark uses a prefix,
 /// so every size sees the same data (truncated to the relevant length).
@@ -21,8 +21,7 @@ fn bench_expfilter(c: &mut Criterion) {
 
     let data = make_data();
 
-    // typical smoothing parameter
-    let alpha = 0.5;
+    let alpha = -0.28;
 
     for n in SIZES {
         let data = &data[..n as usize];
@@ -91,7 +90,7 @@ fn bench_interpn_coeffs(c: &mut Criterion) {
         let mut coeffs = vec![0.0; MultiBsplineRegular::<f64, 1>::coeff_storage_len(dims)];
         let mut scratch = vec![0.0; MultiBsplineRegular::<f64, 1>::construction_scratch_len(dims)];
 
-        group.bench_with_input(BenchmarkId::from_parameter(n), &data, |b, data| {
+        group.bench_with_input(BenchmarkId::from_parameter(n), data, |b, data| {
             // b.iter(|| coefficients(dims, data, &mut coeffs, &mut scratch).unwrap());
             b.iter(|| coefficients_par(dims, data, &mut coeffs, &mut scratch, 4).unwrap());
         });

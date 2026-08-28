@@ -30,8 +30,10 @@ endif()
 # aggressive but numerics-preserving optimizations for release builds
 include(CheckCCompilerFlag)
 check_c_compiler_flag("-march=native" HAVE_MARCH_NATIVE)
+# target_compile_options(Splinter PRIVATE
+#   $<$<CONFIG:Release>:-funroll-loops -fno-math-errno>)
 target_compile_options(Splinter PRIVATE
-  $<$<CONFIG:Release>:-funroll-loops -fno-math-errno>)
+   $<$<CONFIG:Release>: -fno-math-errno>)
 if(HAVE_MARCH_NATIVE)
   target_compile_options(Splinter PRIVATE $<$<CONFIG:Release>:-march=native>)
 endif()

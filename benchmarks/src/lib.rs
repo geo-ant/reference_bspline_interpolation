@@ -10,11 +10,11 @@ pub enum BoundaryExtension {
 #[inline(always)]
 pub fn apply_expfilter(
     data: &mut [f64],
-    stride: u32,
-    count: u32,
+    stride: i32,
+    count: i32,
     extension: BoundaryExtension,
     alpha: f64,
-    n_trunc: u32,
+    n_trunc: i32,
 ) {
     unsafe {
         bindings::splinter_expfilter(
@@ -32,11 +32,11 @@ mod bindings {
     unsafe extern "C" {
         pub fn splinter_expfilter(
             data: *mut f64,
-            step: u32,
-            n: u32,
+            step: i32,
+            n: i32,
             extension: u8,
             alpha: f64,
-            n0: u32,
+            n0: i32,
         );
     }
 }
