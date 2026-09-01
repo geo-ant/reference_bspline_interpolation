@@ -12,8 +12,6 @@ option(SPLINTER_LIB_ONLY "build the library only and omit the executables" OFF)
 set(GSL_FIND_QUIETLY TRUE)
 find_package(GSL)
 
-# IIO
-add_subdirectory(src/iio)
 
 add_library(Splinter src/bspline.c src/bspline.h src/splinter.c src/splinter.h)
 set_property(TARGET Splinter PROPERTY COMPILE_WARNING_AS_ERROR ON)
@@ -39,6 +37,9 @@ if(HAVE_MARCH_NATIVE)
 endif()
 
 if (NOT SPLINTER_LIB_ONLY)
+  # IIO
+  add_subdirectory(src/iio)
+
   add_executable(bspline src/bspline_main.c src/splinter_transform.c src/homography_tools.c)
   target_link_libraries(bspline PRIVATE IIOLIB Splinter)
   

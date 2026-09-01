@@ -92,7 +92,7 @@ fn bench_interpn_coeffs(c: &mut Criterion) {
 
         group.bench_with_input(BenchmarkId::from_parameter(n), data, |b, data| {
             // b.iter(|| coefficients(dims, data, &mut coeffs, &mut scratch).unwrap());
-            b.iter(|| coefficients_par(dims, data, &mut coeffs, &mut scratch, 4).unwrap());
+            b.iter(|| coefficients(dims, data, &mut coeffs, &mut scratch).unwrap());
         });
     }
 
