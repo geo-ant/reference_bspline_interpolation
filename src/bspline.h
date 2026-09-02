@@ -25,6 +25,7 @@
 #ifndef BSPLINE_H
 #define BSPLINE_H
 
+#include <stdbool.h>
 #define MAX_TABULATED_ORDER 11 ///< Maximum order of tabulated splines
 #define MAX_ORDER 16 ///< Max spline order with guaranty of truncation precision
 
@@ -57,7 +58,10 @@ void compute_poles(double* poles, const double* ztransCoeff, int n);
 void compute_mu(double* mu, const double* poles, int tn);
 void compute_truncation(int* trunc, const double* poles, int tn, double eps);
 
-void get_bspline(int n, prefilter_t* p, Bspline* s);
+bool get_bspline(int n, prefilter_t* p, Bspline* s);
+
+// like get_bspline but only gets the prefilter
+bool get_prefilter(int n, prefilter_t* p);
 
 #ifdef __cplusplus
 }

@@ -1,18 +1,15 @@
 // quick and dirty tool to apply the expontial filter in-place to some
 // f64 data.
 
+#include "common_utils.hpp"
 #include "splinter.h"
 #include <cstddef>
 #include <cstdlib>
-#include <exception>
 #include <filesystem>
 #include <format>
-#include <fstream>
 #include <iostream>
-#include <limits>
 #include <span>
 #include <string>
-#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -24,12 +21,9 @@ struct Args {
 };
 
 static void show_usage(char const *appname);
-static bool read_f64(std::filesystem::path path, std::vector<double> &out);
-static bool write_f64(std::filesystem::path path, std::span<double const> data);
 static bool parse_args(int argc, char const *const *argv, Args &out_args);
-static char const *to_cstr(BoundaryExt ext);
 
-int main(int const argc, char const *const * const argv) {
+int main(int const argc, char const *const *const argv) {
 
   Args args;
   if (!parse_args(argc, argv, args)) {
@@ -64,27 +58,12 @@ static bool parse_args(int argc, char const *const *argv, Args &out_args) {
     return -1;
   }
 
-  using BoundaryExtUnderlying = std::underlying_type_t<BoundaryExt>;
-  BoundaryExtUnderlying const ext_val = std::stoi(argv[1]);
-  BoundaryExt extension;
+  auto const ext_val = std::stoi(argv[1]);
+  std::optional<BoundaryExt> maybe_extension = try_from(ext_val);
 
-  switch (static_cast<BoundaryExtUnderlying>(ext_val)) {
-  case BOUNDARY_PERIODIC: {
-    extension = BOUNDARY_PERIODIC;
-  } break;
-  case BOUNDARY_WSYMMETRIC: {
-    extension = BOUNDARY_WSYMMETRIC;
-  } break;
-  case BOUNDARY_CONSTANT: {
-    extension = BOUNDARY_CONSTANT;
-  } break;
-  case BOUNDARY_HSYMMETRIC: {
-    extension = BOUNDARY_HSYMMETRIC;
-  } break;
-  default: {
-    std::cerr << "Illegal value for boundary extension" << std::endl;
+  if (!maybe_extension) {
+    std::cerr << "illegal value for boundary extension" << std::endl;
     return false;
-  }
   }
 
   int const n_trunc = std::stoi(argv[2]);
@@ -105,7 +84,7 @@ static bool parse_args(int argc, char const *const *argv, Args &out_args) {
     return false;
   }
 
-  out_args = Args{.extension = extension,
+  out_args = Args{.extension = *maybe_extension,
                   .n_trunc = n_trunc,
                   .alpha = alpha,
                   .file = filename};
@@ -113,7 +92,7 @@ static bool parse_args(int argc, char const *const *argv, Args &out_args) {
   return true;
 }
 
-static void show_usage(char const * const appname) {
+static void show_usage(char const *const appname) {
   std::cout << std::format(
       "Apply the exponential filter for pole alpha to float64 data\n\n"
       "Usage\n"
@@ -129,72 +108,4 @@ static void show_usage(char const * const appname) {
       std::to_underlying(BoundaryExt::BOUNDARY_HSYMMETRIC),
       std::to_underlying(BoundaryExt::BOUNDARY_WSYMMETRIC),
       std::to_underlying(BoundaryExt::BOUNDARY_PERIODIC));
-}
-
-static bool read_f64(std::filesystem::path path, std::vector<double> &out) {
-  try {
-    std::ifstream file(path);
-    file.seekg(0, std::ios::end);
-    const auto bytes = file.tellg();
-
-    if (bytes < 0 || bytes % sizeof(double) != 0) {
-      std::cerr << "Invalid double file" << std::endl;
-      return false;
-    }
-
-    const auto count = static_cast<std::size_t>(bytes) / sizeof(double);
-
-    file.seekg(0);
-    out.resize(count);
-    file.read(reinterpret_cast<char *>(out.data()),
-              static_cast<std::streamsize>(out.size() * sizeof(double)));
-    return true;
-  } catch (std::exception &e) {
-    std::cerr << "Error: " << e.what() << std::endl;
-    return false;
-  }
-}
-
-static bool write_f64(std::filesystem::path path,
-                      std::span<double const> data) {
-  std::ofstream file(path, std::ios::binary | std::ios::trunc);
-  if (!file)
-    return false;
-
-  const auto bytes = std::as_bytes(data);
-  std::size_t offset = 0;
-
-  constexpr auto max_write =
-      static_cast<std::size_t>(std::numeric_limits<std::streamsize>::max());
-
-  while (offset < bytes.size()) {
-    const std::size_t remaining = bytes.size() - offset;
-    const auto count = static_cast<std::streamsize>(
-        remaining < max_write ? remaining : max_write);
-
-    file.write(reinterpret_cast<char const *>(bytes.data() + offset), count);
-
-    if (!file)
-      return false;
-
-    offset += static_cast<std::size_t>(count);
-  }
-
-  return true;
-}
-
-static char const *to_cstr(BoundaryExt ext) {
-  switch (ext) {
-  case BOUNDARY_CONSTANT:
-    return "cons";
-  case BOUNDARY_HSYMMETRIC:
-    return "hsym";
-  case BOUNDARY_WSYMMETRIC:
-    return "wsym";
-  case BOUNDARY_PERIODIC:
-    return "peri";
-  default:
-    // shouldn't happen
-    return "UNKNOWN";
-  }
 }

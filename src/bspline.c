@@ -628,18 +628,28 @@ static prefilter_t InterpMethodTable[MAX_TABULATED_ORDER+1] = {
     {5, BSpline11Poles,    1}
 };
 
+bool get_prefilter(int const n, prefilter_t* const p) {
+    if(n <= MAX_TABULATED_ORDER) {
+        *p = InterpMethodTable[n];
+        return true;
+    } else {
+        return false;
+    }
+}
+
 /// \brief Compute prefiltering parameters and spline coefficients.
 /// \details Up to \c MAX_TABULATED_ORDER, no computation is necessary and
 /// fields of \a p and \a s are not memory-allocated.
 /// \param n spline order
 /// \param[out] p prefiltering parameters
 /// \param[out] s spline function coefficients
-void get_bspline(int n, prefilter_t* p, Bspline* s) {
+bool get_bspline(int n, prefilter_t* p, Bspline* s) {
     Bspline tmp = {n, 0.5*(n+1), n/2, NULL, NULL};
     *s = tmp;
     if(n <= MAX_TABULATED_ORDER) {
         *p = InterpMethodTable[n];
         s->eval = BSplineTable[n];
+        return true;
     } else {
         s->order = n;
         s->eval = bsplineEval;
@@ -663,12 +673,13 @@ void get_bspline(int n, prefilter_t* p, Bspline* s) {
 #else
         fprintf(stderr, "The program was built without GSL support: ");
         fprintf(stderr, "Use bspline order at most %i.\n", MAX_TABULATED_ORDER);
-        exit(1);
+        return false;
 #endif
         free(zcoeff);
 
         // Computation of the kernel
         s->C = malloc(((n+1)*s->tn+floor(s->radius)+1)*sizeof*s->C);
         compute_bspline_poly(s->C, n);
+        return true;
     }
 }

@@ -23,6 +23,7 @@
  */
 
 #include "splinter.h"
+#include "bspline.h"
 #include "util.h"
 #include <stdint.h>
 #include <string.h>
@@ -233,6 +234,26 @@ static void prefiltering(double* data, int w, int h, BoundaryExt boundary,
         for(k = 0; k < w*h; k++)
             data[k] *= factor;
     }
+}
+
+EXTERN_C bool splinter_prefilter_inplace2d(double * const data, int32_t const width, int32_t const height,
+                                  BoundaryExt const ext, uint8_t const spline_order,
+                                  // number of truncation indices floor(spline_order/2)
+                                  int32_t const * const truncation_indices) {
+   prefilter_t prefilter;
+   if (!get_prefilter(spline_order, &prefilter)) {
+     return false;
+   }
+
+   prefiltering(data,
+                width,
+                height,
+                ext,
+                &prefilter,
+                truncation_indices);
+
+   // prefilter_t pref =  
+   return true;
 }
 
 /// \brief 1D in-place exp filter with a recursive filter pair (larger domain)

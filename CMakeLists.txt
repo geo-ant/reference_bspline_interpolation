@@ -37,23 +37,33 @@ if(HAVE_MARCH_NATIVE)
 endif()
 
 if (NOT SPLINTER_LIB_ONLY)
-  # IIO
-  add_subdirectory(src/iio)
+  # NOTE(geo): those commented out libs use image IO which doesn't
+  # compile on my android setup, but I don't need those anyways
+  # 
+  # # IIO
+  # add_subdirectory(src/iio)
 
-  add_executable(bspline src/bspline_main.c src/splinter_transform.c src/homography_tools.c)
-  target_link_libraries(bspline PRIVATE IIOLIB Splinter)
+  # add_executable(bspline src/bspline_main.c src/splinter_transform.c src/homography_tools.c)
+  # target_link_libraries(bspline PRIVATE IIOLIB Splinter)
   
-  # there's an error in here...
-  add_executable(hom4p src/hom4p.c src/homography_tools.c)
-  target_link_libraries(hom4p PRIVATE m)
+  # # there's an error in here...
+  # add_executable(hom4p src/hom4p.c src/homography_tools.c)
+  # target_link_libraries(hom4p PRIVATE m)
+
+  add_library(Common src/common_utils.cpp)
+  target_include_directories(Common PUBLIC src)
   
   # (e)xponential (f)ilter (i)n (p)lace
   add_executable(efip src/efip_main.cpp)
-  target_link_libraries(efip PUBLIC Splinter)
+  target_link_libraries(efip PRIVATE Splinter Common)
   
   # calculate the truncation index
   add_executable(calc_truncn src/calc_truncn_main.cpp)
-  target_link_libraries(calc_truncn PUBLIC Splinter)
+  target_link_libraries(calc_truncn PRIVATE Splinter)
+
+  # calculate 2D prefilter
+  add_executable(prefilter2d src/prefilter2d_main.cpp)
+  target_link_libraries(prefilter2d PRIVATE Splinter Common)
 endif()
 
 if(GSL_FOUND)

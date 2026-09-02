@@ -30,10 +30,10 @@
 
 /// Boundary extension method used in prefiltering
 typedef enum : uint8_t {
-    BOUNDARY_CONSTANT = 0,   ///< constant value
-    BOUNDARY_HSYMMETRIC = 1, ///< half-symmetric
-    BOUNDARY_WSYMMETRIC = 2, ///< whole-symmetric
-    BOUNDARY_PERIODIC = 3    ///< periodic
+  BOUNDARY_CONSTANT = 0,   ///< constant value
+  BOUNDARY_HSYMMETRIC = 1, ///< half-symmetric
+  BOUNDARY_WSYMMETRIC = 2, ///< whole-symmetric
+  BOUNDARY_PERIODIC = 3    ///< periodic
 } BoundaryExt;
 
 /// \brief Opaque structure, intended to be used for spline interpolation.
@@ -43,26 +43,33 @@ typedef enum : uint8_t {
 /// (x,y), can then be performed.
 /// At the end, disposal is achieved by \ref splinter_destroy_plan.
 typedef struct {
-    double* prefilt; ///< prefiltered image
-    int w,h,c; ///< width,height,channels
-    int shift; ///< shift in each channel
-    Bspline* bspline; ///< Bspline kernel
-    int (*ext)(int, int); ///< get pixels of extended image
-    double *xBuf, *yBuf; ///< buffers for computation (internal usage)
+  double *prefilt;      ///< prefiltered image
+  int w, h, c;          ///< width,height,channels
+  int shift;            ///< shift in each channel
+  Bspline *bspline;     ///< Bspline kernel
+  int (*ext)(int, int); ///< get pixels of extended image
+  double *xBuf, *yBuf;  ///< buffers for computation (internal usage)
 } splinter_plan_t;
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-splinter_plan_t splinter_plan(const double* in, int w, int h, int c,
-                              int order, BoundaryExt e, double eps, int larger);
+splinter_plan_t splinter_plan(const double *in, int w, int h, int c, int order,
+                              BoundaryExt e, double eps, int larger);
 void splinter_destroy_plan(splinter_plan_t plan);
 
-void splinter(double* out, double x, double y, splinter_plan_t plan);
+void splinter(double *out, double x, double y, splinter_plan_t plan);
 
 // expose the exponential filtering method directly
 void splinter_expfilter(double *data, int32_t step, int32_t n,
-                      BoundaryExt boundary, double alpha, int32_t n0);
+                        BoundaryExt boundary, double alpha, int32_t n0);
+
+// expose the 2d prefiltering fucnction directly
+bool splinter_prefilter_inplace2d(double *data, int32_t width, int32_t height,
+                                  BoundaryExt ext, uint8_t spline_order,
+                                  // number of truncation indices floor(spline_order/2)
+                                  int32_t const *truncation_indices);
+
 #ifdef __cplusplus
 }
 #endif
