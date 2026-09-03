@@ -92,3 +92,20 @@ std::optional<BoundaryExt> try_from(int const value) {
   }
   }
 }
+
+std::optional<BoundaryExt> try_from(char const* const str) {
+  using BoundaryExtUnderlying = std::underlying_type_t<BoundaryExt>;
+  std::string text(str);
+
+  if (text == "peri") {
+    return BOUNDARY_PERIODIC;
+  } else if (text == "wsym") {
+    return BOUNDARY_WSYMMETRIC;
+  } else if (text == "cons") {
+    return BOUNDARY_CONSTANT;
+  } else if (text == "hsym") {
+    return BOUNDARY_HSYMMETRIC;
+  } else {
+    return {};
+  }
+}
