@@ -33,6 +33,11 @@ int main(int const argc, char const *const *const argv) {
     return -1;
   }
 
+  if (data.size() != static_cast<size_t>(args->width)*static_cast<size_t>(args->height)) {
+    std::cerr << "file size invalid for given dimensions\n";
+    return -1;
+  }
+
   prefilter_t prefilt;
   if (!get_prefilter(args->spline_order, &prefilt)) {
     std::cerr << "getting prefilter failed, likely spline order too large\n";
@@ -52,7 +57,7 @@ int main(int const argc, char const *const *const argv) {
 
   auto const outfile = [ext = args->ext, spline_order = args->spline_order,
                         epsilon = args->epsilon](std::filesystem::path infile) {
-    infile.replace_extension(std::format("o{}.eps{:.6}.{}.f64", spline_order,
+    infile.replace_extension(std::format("ord{}.eps{:.6}.{}.f64", spline_order,
                                          epsilon, to_cstr(ext)));
     return infile;
   }(args->infile);
@@ -71,7 +76,7 @@ static void show_usage(char const *const program) {
   std::cout
       << std::format(
              "Usage: {} <file> <width> <height> <order> <boundary> <eps>\n"
-             "Calculat the normalized prefiltering of a 2D image\n"
+             "Compute the normalized prefiltering of a 2D image\n"
              "\n"
              "  file:     f64 float raw image data\n"
              "  width:    width of the image (row major)\n"
@@ -80,8 +85,7 @@ static void show_usage(char const *const program) {
              "  boundary: boundary extension, values: 'hsym', 'wsym', 'peri', "
              "'cons'\n"
              "  eps:      f64 value for the presicion\n",
-             program
-
+             std::filesystem::path(program).filename().c_str()
              )
       << std::endl;
 }
