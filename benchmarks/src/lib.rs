@@ -28,7 +28,29 @@ pub fn apply_expfilter(
     }
 }
 
+pub fn splinter_coefficients2d_inplace(
+    data: &mut [f64],
+    width: i32,
+    height: i32,
+    ext: BoundaryExtension,
+    spline_order: u8,
+    epsilon: f64,
+) {
+    unsafe {
+        bindings::splinter_prefilter_inplace2d(
+            data.as_mut_ptr(),
+            width,
+            height,
+            ext,
+            spline_order,
+            epsilon,
+        );
+    }
+}
+
 mod bindings {
+    use crate::BoundaryExtension;
+
     unsafe extern "C" {
         pub fn splinter_expfilter(
             data: *mut f64,
@@ -37,6 +59,14 @@ mod bindings {
             extension: u8,
             alpha: f64,
             n0: i32,
+        );
+        pub fn splinter_prefilter_inplace2d(
+            data: *const f64,
+            width: i32,
+            height: i32,
+            ext: BoundaryExtension,
+            spline_order: u8,
+            epsilon: f64,
         );
     }
 }

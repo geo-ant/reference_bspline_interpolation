@@ -64,11 +64,12 @@ void splinter(double *out, double x, double y, splinter_plan_t plan);
 void splinter_expfilter(double *data, int32_t step, int32_t n,
                         BoundaryExt boundary, double alpha, int32_t n0);
 
-// expose the 2d prefiltering fucnction directly
+// expose the 2d prefiltering fucnction directly. Only works for the tabulated
+// orders, but doesn't use intermediate allocations for computing the truncation
+// indices...
 bool splinter_prefilter_inplace2d(double *data, int32_t width, int32_t height,
                                   BoundaryExt ext, uint8_t spline_order,
-                                  // number of truncation indices floor(spline_order/2)
-                                  int32_t const *truncation_indices);
+                                  double epsilon);
 
 #ifdef __cplusplus
 }

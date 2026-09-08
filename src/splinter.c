@@ -236,24 +236,27 @@ static void prefiltering(double* data, int w, int h, BoundaryExt boundary,
     }
 }
 
-EXTERN_C bool splinter_prefilter_inplace2d(double * const data, int32_t const width, int32_t const height,
-                                  BoundaryExt const ext, uint8_t const spline_order,
-                                  // number of truncation indices floor(spline_order/2)
-                                  int32_t const * const truncation_indices) {
-   prefilter_t prefilter;
-   if (!get_prefilter(spline_order, &prefilter)) {
-     return false;
-   }
+EXTERN_C bool
+splinter_prefilter_inplace2d(double *const data, int32_t const width,
+                             int32_t const height, BoundaryExt const ext,
+                             uint8_t const spline_order, double const epsilon) {
+  prefilter_t prefilter;
+  if (!get_prefilter(spline_order, &prefilter)) {
+    return false;
+  }
 
-   prefiltering(data,
-                width,
-                height,
-                ext,
-                &prefilter,
-                truncation_indices);
+  int truncation_indices[MAX_TABULATED_ORDER / 2];
+  if (prefilter.nPoles >
+      sizeof(truncation_indices) / sizeof(truncation_indices[0])) {
+    return false;
+  }
+  compute_truncation(truncation_indices, prefilter.poles, prefilter.nPoles,
+                     epsilon);
 
-   // prefilter_t pref =  
-   return true;
+  prefiltering(data, width, height, ext, &prefilter, truncation_indices);
+
+  // prefilter_t pref =
+  return true;
 }
 
 /// \brief 1D in-place exp filter with a recursive filter pair (larger domain)

@@ -99,5 +99,6 @@ fn bench_interpn_coeffs(c: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(benches, bench_expfilter, bench_interpn_coeffs);
+// criterion_group!(benches, bench_expfilter, bench_interpn_coeffs);
+criterion_group!(benches, bench_interpn_coeffs);
 criterion_main!(benches);

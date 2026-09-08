@@ -44,13 +44,9 @@ int main(int const argc, char const *const *const argv) {
     return -1;
   }
 
-  std::vector<int32_t> truncation_indices(prefilt.nPoles);
-  compute_truncation(truncation_indices.data(), prefilt.poles, prefilt.nPoles,
-                     args->epsilon);
-
   if (!splinter_prefilter_inplace2d(data.data(), args->width, args->height,
                                     args->ext, args->spline_order,
-                                    truncation_indices.data())) {
+                                    args->epsilon)) {
     std::cerr << "error computing prefilter\n";
     return 0;
   }
