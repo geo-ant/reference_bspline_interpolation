@@ -12,6 +12,7 @@ cmake = "0.1"
 criterion = { version = "0.5", features = ["html_reports"] }
 rand = "0.8"
 interpn = {version = "0.11", features = ["fma", "deep-unroll", "std"]}
+spleen = {path = "../../spleen", features = ["fma","std"]}
 
 [[bench]]
 name = "expfilter"
