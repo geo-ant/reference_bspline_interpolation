@@ -2,23 +2,24 @@
 #include <format>
 #include <iostream>
 #include <string>
+#include <vector>
 
 #include "bspline.h"
 
 static void show_usage(char const *appname);
 
-int main(int const argc, char const *const * const argv) {
-  if (argc != 2+1) {
+int main(int const argc, char const *const *const argv) {
+  if (argc != 2 + 1) {
     show_usage(argv[0]);
     return -1;
   }
 
   std::cout << std::format("alpha = {}, eps = {}\n", argv[1], argv[2]);
-  double alpha = std::stod(argv[1]);
-  if (alpha <= -1 || alpha > 0) {
-    std::cerr << "pole must be in (-1,0)" << std::endl;
+  int order = std::stoi(argv[1]);
+  if (order < 0 || order > 11) {
+    std::cerr << "order must be integer in [0,11]" << std::endl;
     return -1;
-  } 
+  }
 
   double eps = std::stod(argv[2]);
   if (eps <= 0) {
@@ -26,26 +27,35 @@ int main(int const argc, char const *const * const argv) {
     return -1;
   }
 
-  int trunc = -1;
-  compute_truncation(&trunc, &alpha, 1, eps);
-  if (trunc < 0) {
-    std::cerr << "something went horribly wrong!" << std::endl;
+  prefilter_t p;
+  if (!get_prefilter(order, &p)) {
+    std::cerr << "error getting spline args, likely wrong order\n";
     return -1;
   }
 
-  std::cout << "truncation index: " << trunc << std::endl;
+  std::vector<int> indices(p.nPoles);
+
+  compute_truncation(indices.data(), p.poles, p.nPoles, eps);
+
+  std::cout << "truncation indices: [";
+  for (int j = 0; j < indices.size()-1; j++) {
+    std::cout << indices[j] << ',';
+  }
+  std::cout << indices.back() << ']' << '\n';
+
   return 0;
 }
 
 static void show_usage(char const *const appname) {
-  std::cout << std::format("Calculate the truncation index for a given pole in "
-                           "(-1,0) with precision epsilon > 0\n\n"
-                           "Usage:\n"
-                           "{} <pole> <epsilon>\n"
-                           "\n"
-                           "Arguments:\n"
-                           "   pole:    pole in (-1,0)\n"
-                           "   epsilon: precision > 0\n",
-                           appname)
-            << std::endl;
+  std::cout
+      << std::format(
+             "Calculate the trunctation indices for a given spline order\n\n"
+             "Usage:\n"
+             "{} <order> <epsilon>\n"
+             "\n"
+             "Arguments:\n"
+             "   order:   spline order in [0,11]\n"
+             "   epsilon: precision > 0\n",
+             appname)
+      << std::endl;
 }
