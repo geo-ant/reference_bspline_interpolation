@@ -1,17 +1,22 @@
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 use interpn::multibspline::regular::{MultiBsplineRegular, coefficients, coefficients_par};
 use rand::{Rng, SeedableRng, distributions::Uniform, rngs::StdRng};
+use std::num::NonZero;
 
 use benchmarks::{BoundaryExtension, apply_expfilter, splinter_coefficients2d_inplace};
-use spleen::{TransmittableBoundaryExtension as SpleenBoundaryExtension, bspline::BSpline3, expf64, inplace::coefficients2d};
+use spleen::{
+    TransmittableBoundaryExtension as SpleenBoundaryExtension, bspline::BSpline3, expf64,
+    expf64_strided, inplace::coefficients2d,
+};
 
 // stride = 1, varying number of samples
 const SIZES: [i32; 6] = [64, 256, 1024, 4096, 16384, 65535];
 
 // square image sides (n x n f64s), chosen from this machine's lscpu cache sizes
 // (L1d ~32-48KiB, L2 ~2MiB, L3 24MiB) to force L1-, L2-, and L3/RAM-resident runs:
-// 32 -> 8KiB (fits L1), 256 -> 512KiB (exceeds L1, fits L2), 1024 -> 8MiB (exceeds L2)
-const IMG_SIZES_2D: [i32; 3] = [32, 256, 1024];
+// 32 -> 8KiB (fits L1), 256 -> 512KiB (exceeds L1, fits L2), 1024 -> 8MiB (exceeds L2),
+// 4096 -> 128MiB (well beyond L3, mostly RAM-bound)
+const IMG_SIZES_2D: [i32; 4] = [32, 256, 1024, 4096];
 
 /// Generate one buffer at the largest size; each benchmark uses a prefix,
 /// so every size sees the same data (truncated to the relevant length).
@@ -276,14 +281,86 @@ fn bench_spleen_coeffs2d(c: &mut Criterion) {
     group.finish();
 }
 
+/// Benchmark splinter's C expfilter vs spleen's `expf64_strided` directly on
+/// real strided (column, stride=width) access, applied to every column of a
+/// fresh random image each iteration -- isolates the strided-access code path
+/// itself (both are the actual production implementations, not reimplementations).
+fn bench_strided_expfilter(c: &mut Criterion) {
+    let mut group = c.benchmark_group("strided_expfilter");
+
+    let alpha = -0.28;
+    let n_trunc = 10;
+
+    for n in IMG_SIZES_2D {
+        let width = n as usize;
+        let height = n as usize;
+
+        let mut rng = StdRng::seed_from_u64(0x5555_aaaa);
+        let dist = Uniform::new(-100.0f64, 100.0f64);
+        let image: Vec<f64> = (0..(width * height)).map(|_| rng.sample(dist)).collect();
+
+        group.bench_with_input(
+            BenchmarkId::new("splinter", format!("{n}x{n}")),
+            &image,
+            |b, image| {
+                b.iter_batched(
+                    || image.clone(),
+                    |mut buf| {
+                        for col in 0..width {
+                            apply_expfilter(
+                                &mut buf[col..],
+                                width as i32,
+                                height as i32,
+                                BoundaryExtension::Periodic,
+                                alpha,
+                                n_trunc,
+                            );
+                        }
+                        buf
+                    },
+                    criterion::BatchSize::LargeInput,
+                );
+            },
+        );
+
+        group.bench_with_input(
+            BenchmarkId::new("spleen", format!("{n}x{n}")),
+            &image,
+            |b, image| {
+                b.iter_batched(
+                    || image.clone(),
+                    |mut buf| {
+                        for col in 0..width {
+                            expf64_strided(
+                                alpha,
+                                &mut buf[col..],
+                                NonZero::new(width).unwrap(),
+                                NonZero::new(height).unwrap(),
+                                n_trunc as usize,
+                                SpleenBoundaryExtension::Periodic,
+                            )
+                            .unwrap();
+                        }
+                        buf
+                    },
+                    criterion::BatchSize::LargeInput,
+                );
+            },
+        );
+    }
+
+    group.finish();
+}
+
 // 2D benches on hold while we investigate the 1D expfilter gap first
 criterion_group!(
     benches,
-    bench_expfilter,
-    bench_spleen_expfilter,
+    // bench_expfilter,
+    // bench_spleen_expfilter,
+    // bench_strided_expfilter,
     // bench_interpn_coeffs,
-    // bench_splinter_coeffs2d,
-    // bench_interpn_coeffs2d,
-    // bench_spleen_coeffs2d,
+    bench_splinter_coeffs2d,
+    bench_spleen_coeffs2d,
+    bench_interpn_coeffs2d,
 );
 criterion_main!(benches);
