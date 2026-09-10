@@ -6,7 +6,7 @@ use std::num::NonZero;
 use benchmarks::{BoundaryExtension, apply_expfilter, splinter_coefficients2d_inplace};
 use spleen::{
     TransmittableBoundaryExtension as SpleenBoundaryExtension, bspline::BSpline3, expf64,
-    expf64_strided, inplace::coefficients2d,
+    inplace::coefficients2d,
 };
 
 // stride = 1, varying number of samples
@@ -323,30 +323,30 @@ fn bench_strided_expfilter(c: &mut Criterion) {
             },
         );
 
-        group.bench_with_input(
-            BenchmarkId::new("spleen", format!("{n}x{n}")),
-            &image,
-            |b, image| {
-                b.iter_batched(
-                    || image.clone(),
-                    |mut buf| {
-                        for col in 0..width {
-                            expf64_strided(
-                                alpha,
-                                &mut buf[col..],
-                                NonZero::new(width).unwrap(),
-                                NonZero::new(height).unwrap(),
-                                n_trunc as usize,
-                                SpleenBoundaryExtension::Periodic,
-                            )
-                            .unwrap();
-                        }
-                        buf
-                    },
-                    criterion::BatchSize::LargeInput,
-                );
-            },
-        );
+        // group.bench_with_input(
+        //     BenchmarkId::new("spleen", format!("{n}x{n}")),
+        //     &image,
+        //     |b, image| {
+        //         b.iter_batched(
+        //             || image.clone(),
+        //             |mut buf| {
+        //                 for col in 0..width {
+        //                     expf64(
+        //                         alpha,
+        //                         &mut buf[col..],
+        //                         NonZero::new(width).unwrap(),
+        //                         NonZero::new(height).unwrap(),
+        //                         n_trunc as usize,
+        //                         SpleenBoundaryExtension::Periodic,
+        //                     )
+        //                     .unwrap();
+        //                 }
+        //                 buf
+        //             },
+        //             criterion::BatchSize::LargeInput,
+        //         );
+        //     },
+        // );
     }
 
     group.finish();
