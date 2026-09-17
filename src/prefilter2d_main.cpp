@@ -53,7 +53,7 @@ int main(int const argc, char const *const *const argv) {
 
   auto const outfile = [ext = args->ext, spline_order = args->spline_order,
                         epsilon = args->epsilon](std::filesystem::path infile) {
-    infile.replace_extension(std::format("ord{}.eps{:.6}.{}.f64", spline_order,
+    infile.replace_extension(std::format("ord{}.eps{:.6}.{}.reord.f64", spline_order,
                                          epsilon, to_cstr(ext)));
     return infile;
   }(args->infile);

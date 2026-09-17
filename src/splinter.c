@@ -202,6 +202,94 @@ static void expFilter(double *data, int32_t step, int32_t n,
     }
 }
 
+// NOTE(geo): split the exponential filtering into causal and anticausal
+// components just to see whether my thoughts on commuting the exponential
+// filters hold up in practice.
+static void expFilterCausal(double *data, int32_t step, int32_t n,
+                      BoundaryExt boundary, double alpha, int32_t n0) {
+    double powAlpha=1, last=data[0];
+
+    // avoid too large initialization
+    if(n0 > n)
+        n0 = n;
+    if(n0 == n && boundary == BOUNDARY_WSYMMETRIC)
+        n0 = n-1;
+    int iEnd=n0*step;
+    // Causal init
+    switch(boundary) {
+    case BOUNDARY_CONSTANT:
+        last /= 1-alpha;
+        break;
+    case BOUNDARY_HSYMMETRIC:
+        for(int i=0; i<iEnd; i+=step) {
+            powAlpha *= alpha;
+            last += data[i]*powAlpha;
+        }
+        break;
+    case BOUNDARY_WSYMMETRIC:
+        for(int i=step; i<=iEnd; i+=step) {
+            powAlpha *= alpha;
+            last += data[i]*powAlpha;
+        }
+        break;
+    case BOUNDARY_PERIODIC:
+        for(int i=step; i<=iEnd; i+=step) {
+            powAlpha *= alpha;
+            last += data[step*n-i]*powAlpha;
+        }
+        break;
+    default: assert(0); // Should never go here
+        break;
+    }
+    data[0] = last;
+
+    // Causal filter
+    iEnd = (n-1)*step;
+    for(int i=step; i<iEnd; i+=step) {
+        data[i] += alpha*last;
+        last = data[i];
+    }
+}
+
+
+static void expFilterAntiCausal(double *data, int32_t step, int32_t n,
+                      BoundaryExt boundary, double alpha, int32_t n0) {
+    double last=data[0];
+    int const iEnd = (n-1)*step;
+
+    // Anti-causal init
+    switch(boundary) {
+    case BOUNDARY_CONSTANT:
+        data[iEnd] = last = (alpha*(-data[iEnd] + (alpha - 1)*alpha*last))
+            /((alpha - 1)*(alpha*alpha - 1));
+        break;
+    case BOUNDARY_HSYMMETRIC:
+        data[iEnd] += alpha*last;
+        last = data[iEnd] *= alpha/(alpha - 1);
+        break;
+    case BOUNDARY_WSYMMETRIC:
+        data[iEnd] += alpha*last;
+        data[iEnd] = last = (alpha/(alpha*alpha - 1))
+            * ( data[iEnd] + alpha*data[iEnd - step] );
+        break;
+    case BOUNDARY_PERIODIC:
+        data[iEnd] += alpha*last;
+        last = data[iEnd];
+        double powAlpha = 1;
+        for(int i=0; i<n0*step; i+=step) {
+            powAlpha *= alpha;
+            last += data[i]*powAlpha;
+        }
+        data[iEnd] = last *= -alpha;
+        break;
+    }
+    // Anti-causal filter
+    for(int i=iEnd-step; i>=0; i-=step) {
+        data[i] = alpha*(last - data[i]);
+        last = data[i];
+    }
+}
+
 EXTERN_C void splinter_expfilter(double *data, int32_t step, int32_t n, BoundaryExt boundary, double alpha, int32_t n0) {
     expFilter(data, step, n, boundary, alpha, n0);
 }
@@ -227,6 +315,40 @@ static void prefiltering(double* data, int w, int h, BoundaryExt boundary,
     for(y = 0; y < h; y++)
         for(k = 0; k < m->nPoles; k++)
             expFilter(data+w*y, 1, w, boundary, m->poles[k], truncation[k]);
+
+    // Normalization, twice because 2D
+    if(m->normalization != 1) {
+        unsigned long long factor = m->normalization*m->normalization;
+        for(k = 0; k < w*h; k++)
+            data[k] *= factor;
+    }
+}
+
+// NOTE(geo): not a smart implementation, but a way to see if my
+// reordering thoughts are even true on the highest level
+static void prefilteringReordered(double* data, int w, int h, BoundaryExt boundary,
+                         const prefilter_t* m, const int* truncation) {
+    int x, y, k;
+
+    // Prefiltering of the rows
+    for(y = 0; y < h; y++)
+        for(k = 0; k < m->nPoles; k++)
+            expFilterCausal(data+w*y, 1, w, boundary, m->poles[k], truncation[k]);
+
+    // Prefiltering of the columns
+    for(x = 0; x < w; x++)
+        for(k = 0; k < m->nPoles; k++)
+            expFilterCausal(data + x, w, h, boundary, m->poles[k], truncation[k]);
+
+    // Prefiltering of the rows
+    for(y = 0; y < h; y++)
+        for(k = 0; k < m->nPoles; k++)
+            expFilterAntiCausal(data+w*y, 1, w, boundary, m->poles[k], truncation[k]);
+
+    // Prefiltering of the columns
+    for(x = 0; x < w; x++)
+        for(k = 0; k < m->nPoles; k++)
+            expFilterAntiCausal(data + x, w, h, boundary, m->poles[k], truncation[k]);
 
     // Normalization, twice because 2D
     if(m->normalization != 1) {
