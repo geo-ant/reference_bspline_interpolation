@@ -1,12 +1,13 @@
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 use interpn::multibspline::regular::{MultiBsplineRegular, coefficients, coefficients_par};
 use rand::{Rng, SeedableRng, distributions::Uniform, rngs::StdRng};
-use std::num::NonZero;
+use std::{cell::RefCell, num::NonZero};
 
 use benchmarks::{BoundaryExtension, apply_expfilter, splinter_coefficients2d_inplace};
 use spleen::{
-    TransmittableBoundaryExtension as SpleenBoundaryExtension, bspline::BSpline3, expf64,
-    inplace::coefficients2d,
+    TransmittableBoundaryExtension as SpleenBoundaryExtension,
+    bspline::BSpline3,
+    inplace::{coefficients2d, coefficients2d_blocked},
 };
 
 // stride = 1, varying number of samples
@@ -16,7 +17,7 @@ const SIZES: [i32; 6] = [64, 256, 1024, 4096, 16384, 65535];
 // (L1d ~32-48KiB, L2 ~2MiB, L3 24MiB) to force L1-, L2-, and L3/RAM-resident runs:
 // 32 -> 8KiB (fits L1), 256 -> 512KiB (exceeds L1, fits L2), 1024 -> 8MiB (exceeds L2),
 // 4096 -> 128MiB (well beyond L3, mostly RAM-bound)
-const IMG_SIZES_2D: [i32; 4] = [32, 256, 1024, 4096];
+const IMG_SIZES_2D: [i32; 5] = [4097, 4096, 4095, 1024, 1025 /*, 256, 32*/];
 
 /// Generate one buffer at the largest size; each benchmark uses a prefix,
 /// so every size sees the same data (truncated to the relevant length).
@@ -82,57 +83,57 @@ fn bench_expfilter(c: &mut Criterion) {
     group.finish();
 }
 
-/// Benchmark spleen's exposed 1D expfilter (`expf64`), directly comparable to
-/// `bench_expfilter` (same sizes, alpha, truncation indices, boundary).
-fn bench_spleen_expfilter(c: &mut Criterion) {
-    let mut group = c.benchmark_group("spleen_expfilter");
+// /// Benchmark spleen's exposed 1D expfilter (`expf64`), directly comparable to
+// /// `bench_expfilter` (same sizes, alpha, truncation indices, boundary).
+// fn bench_spleen_expfilter(c: &mut Criterion) {
+//     let mut group = c.benchmark_group("spleen_expfilter");
 
-    let data = make_data();
+//     let data = make_data();
 
-    let alpha = -0.28;
+//     let alpha = -0.28;
 
-    for n in SIZES {
-        let data = &data[..n as usize];
+//     for n in SIZES {
+//         let data = &data[..n as usize];
 
-        // n_trunc varies with size: powers of 10 from 1 up to n/10
-        // e.g. for n = 1024 -> [1, 10, 100]
-        let mut n_trunc = 1;
-        while n_trunc * 10 <= n / 10 {
-            n_trunc *= 10;
-        }
-        let mut truncs = Vec::new();
-        while n_trunc >= 1 {
-            truncs.push(n_trunc);
-            n_trunc /= 10;
-        }
-        truncs.reverse();
+//         // n_trunc varies with size: powers of 10 from 1 up to n/10
+//         // e.g. for n = 1024 -> [1, 10, 100]
+//         let mut n_trunc = 1;
+//         while n_trunc * 10 <= n / 10 {
+//             n_trunc *= 10;
+//         }
+//         let mut truncs = Vec::new();
+//         while n_trunc >= 1 {
+//             truncs.push(n_trunc);
+//             n_trunc /= 10;
+//         }
+//         truncs.reverse();
 
-        for n_trunc in truncs {
-            group.bench_with_input(
-                BenchmarkId::from_parameter(format!("{n}/trunc={n_trunc}")),
-                &data,
-                |b, data| {
-                    b.iter_batched(
-                        || data.to_vec(),
-                        |mut buf| {
-                            expf64(
-                                alpha,
-                                &mut buf,
-                                n_trunc as usize,
-                                SpleenBoundaryExtension::Periodic,
-                            )
-                            .unwrap();
-                            buf
-                        },
-                        criterion::BatchSize::LargeInput,
-                    );
-                },
-            );
-        }
-    }
+//         for n_trunc in truncs {
+//             group.bench_with_input(
+//                 BenchmarkId::from_parameter(format!("{n}/trunc={n_trunc}")),
+//                 &data,
+//                 |b, data| {
+//                     b.iter_batched(
+//                         || data.to_vec(),
+//                         |mut buf| {
+//                             expf64(
+//                                 alpha,
+//                                 &mut buf,
+//                                 n_trunc as usize,
+//                                 SpleenBoundaryExtension::Periodic,
+//                             )
+//                             .unwrap();
+//                             buf
+//                         },
+//                         criterion::BatchSize::LargeInput,
+//                     );
+//                 },
+//             );
+//         }
+//     }
 
-    group.finish();
-}
+//     group.finish();
+// }
 
 /// Benchmark interpN's cubic multib-spline coefficient generation.
 /// Note: interpN uses natural-spline boundaries (zero 3rd derivative),
@@ -179,21 +180,20 @@ fn bench_splinter_coeffs2d(c: &mut Criterion) {
             .collect();
 
         group.bench_with_input(
-            BenchmarkId::from_parameter(format!("{n}x{n}")),
+            BenchmarkId::new("splinter", format!("{n}x{n}")),
             &image,
             |b, image| {
-                b.iter_batched(
+                b.iter_batched_ref(
                     || image.clone(),
                     |mut buf| {
                         splinter_coefficients2d_inplace(
-                            &mut buf,
+                            criterion::black_box(&mut buf),
                             n,
                             n,
                             BoundaryExtension::Periodic,
                             3,
                             1e-6,
-                        );
-                        buf
+                        )
                     },
                     criterion::BatchSize::LargeInput,
                 );
@@ -224,15 +224,19 @@ fn bench_interpn_coeffs2d(c: &mut Criterion) {
         let mut scratch = vec![0.0; MultiBsplineRegular::<f64, 2>::construction_scratch_len(dims)];
 
         group.bench_with_input(
-            BenchmarkId::from_parameter(format!("{n}x{n}")),
+            BenchmarkId::new("interpn", format!("{n}x{n}")),
             &image,
             |b, image| {
-                b.iter(|| {
-                    coefficients(dims, image, &mut coeffs, &mut scratch).unwrap();
-                    // black_box: a reference can't escape an FnMut closure, so
-                    // force-use it here instead of returning it
-                    criterion::black_box(&coeffs);
-                });
+                b.iter_batched_ref(
+                    || image.clone(),
+                    |input| {
+                        coefficients(dims, input, &mut coeffs, &mut scratch).unwrap();
+                        // black_box: a reference can't escape an FnMut closure, so
+                        // force-use it here instead of returning it
+                        criterion::black_box(&coeffs);
+                    },
+                    criterion::BatchSize::LargeInput,
+                );
             },
         );
     }
@@ -255,22 +259,43 @@ fn bench_spleen_coeffs2d(c: &mut Criterion) {
             .collect();
 
         group.bench_with_input(
-            BenchmarkId::from_parameter(format!("{n}x{n}")),
+            BenchmarkId::new("unblocked-spleen", format!("{n}x{n}")),
             &image,
             |b, image| {
-                b.iter_batched(
+                b.iter_batched_ref(
                     || image.clone(),
                     |mut buf| {
                         coefficients2d(
                             BSpline3::<f64>::default(),
-                            &mut buf,
+                            criterion::black_box(&mut buf),
                             n as usize,
                             n as usize,
                             1e-6,
                             SpleenBoundaryExtension::Periodic,
                         )
-                        .unwrap();
-                        buf
+                    },
+                    criterion::BatchSize::LargeInput,
+                );
+            },
+        );
+
+        const BLOCKSIZE: usize = 8;
+
+        group.bench_with_input(
+            BenchmarkId::new("spleen-blocked", format!("{n}x{n}")),
+            &image,
+            |b, image| {
+                b.iter_batched_ref(
+                    || image.clone(),
+                    |mut buf| {
+                        coefficients2d_blocked::<_, _, BLOCKSIZE>(
+                            BSpline3::<f64>::default(),
+                            criterion::black_box(&mut buf),
+                            n as usize,
+                            n as usize,
+                            1e-6,
+                            SpleenBoundaryExtension::Periodic,
+                        )
                     },
                     criterion::BatchSize::LargeInput,
                 );
@@ -351,6 +376,168 @@ fn bench_strided_expfilter(c: &mut Criterion) {
 
     group.finish();
 }
+fn bench_spleen_coeffs2d_persistent(c: &mut Criterion) {
+    let mut group = c.benchmark_group("spleen_coeffs2d_persistent");
+
+    let mut rng = StdRng::seed_from_u64(0xdeadbeef);
+    let dist = Uniform::new(-100.0f64, 100.0f64);
+
+    for n in IMG_SIZES_2D {
+        let image: Vec<f64> = (0..(n as usize * n as usize))
+            .map(|_| rng.sample(dist))
+            .collect();
+
+        // Unblocked
+        {
+            let work = RefCell::new(image.clone());
+
+            group.bench_with_input(
+                BenchmarkId::new("splinter", format!("{n}x{n}")),
+                &image,
+                |b, image| {
+                    b.iter_batched(
+                        || {
+                            // Untimed reset, same allocation every iteration.
+                            work.borrow_mut().copy_from_slice(image);
+                        },
+                        |_| {
+                            let mut work = work.borrow_mut();
+
+                            splinter_coefficients2d_inplace(
+                                criterion::black_box(&mut work),
+                                n,
+                                n,
+                                BoundaryExtension::Periodic,
+                                3,
+                                1e-6,
+                            )
+                        },
+                        criterion::BatchSize::PerIteration,
+                    );
+                },
+            );
+        }
+
+        // Unblocked
+        {
+            let work = RefCell::new(image.clone());
+
+            group.bench_with_input(
+                BenchmarkId::new("unblocked-spleen", format!("{n}x{n}")),
+                &image,
+                |b, image| {
+                    b.iter_batched(
+                        || {
+                            // Untimed reset, same allocation every iteration.
+                            work.borrow_mut().copy_from_slice(image);
+                        },
+                        |_| {
+                            let mut work = work.borrow_mut();
+
+                            coefficients2d(
+                                BSpline3::<f64>::default(),
+                                criterion::black_box(work.as_mut_slice()),
+                                n as usize,
+                                n as usize,
+                                1e-6,
+                                SpleenBoundaryExtension::Periodic,
+                            )
+                            .unwrap();
+                        },
+                        criterion::BatchSize::PerIteration,
+                    );
+                },
+            );
+        }
+
+        // Blocked
+        {
+            let work = RefCell::new(image.clone());
+
+            group.bench_with_input(
+                BenchmarkId::new("spleen-blocked", format!("{n}x{n}")),
+                &image,
+                |b, image| {
+                    b.iter_batched(
+                        || {
+                            // Untimed reset, same allocation every iteration.
+                            work.borrow_mut().copy_from_slice(image);
+                        },
+                        |_| {
+                            let mut work = work.borrow_mut();
+
+                            coefficients2d_blocked::<_, _, 8>(
+                                BSpline3::<f64>::default(),
+                                criterion::black_box(work.as_mut_slice()),
+                                n as usize,
+                                n as usize,
+                                1e-6,
+                                SpleenBoundaryExtension::Periodic,
+                            )
+                            .unwrap();
+                        },
+                        criterion::BatchSize::PerIteration,
+                    );
+                },
+            );
+        }
+    }
+
+    group.finish();
+}
+
+fn bench_interpn_coeffs2d_persistent(c: &mut Criterion) {
+    let mut group = c.benchmark_group("interpn_coeffs2d_persistent");
+
+    let mut rng = StdRng::seed_from_u64(0xabcdef01);
+    let dist = Uniform::new(-100.0f64, 100.0f64);
+
+    for n in IMG_SIZES_2D {
+        let dims = [n as usize, n as usize];
+
+        let image: Vec<f64> = (0..(n as usize * n as usize))
+            .map(|_| rng.sample(dist))
+            .collect();
+
+        // Persistent input allocation.
+        let input = RefCell::new(image.clone());
+
+        // Persistent output/work buffers, as intended by interpn's API.
+        let mut coeffs = vec![0.0; MultiBsplineRegular::<f64, 2>::coeff_storage_len(dims)];
+
+        let mut scratch = vec![0.0; MultiBsplineRegular::<f64, 2>::construction_scratch_len(dims)];
+
+        group.bench_with_input(
+            BenchmarkId::new("interpn", format!("{n}x{n}")),
+            &image,
+            |b, image| {
+                b.iter_batched(
+                    || {
+                        // Not logically required by interpn, but do it so
+                        // pre-timed memory activity matches spleen.
+                        input.borrow_mut().copy_from_slice(image);
+                    },
+                    |_| {
+                        let input = input.borrow();
+
+                        coefficients(
+                            dims,
+                            criterion::black_box(input.as_slice()),
+                            &mut coeffs,
+                            &mut scratch,
+                        )
+                        .unwrap();
+
+                        criterion::black_box(&coeffs);
+                    },
+                    criterion::BatchSize::PerIteration,
+                );
+            },
+        );
+    }
+
+    group.finish();
+}
 
 // 2D benches on hold while we investigate the 1D expfilter gap first
 criterion_group!(
@@ -359,8 +546,10 @@ criterion_group!(
     // bench_spleen_expfilter,
     // bench_strided_expfilter,
     // bench_interpn_coeffs,
-    bench_splinter_coeffs2d,
-    bench_spleen_coeffs2d,
-    bench_interpn_coeffs2d,
+    // bench_splinter_coeffs2d,
+    // bench_spleen_coeffs2d,
+    // bench_interpn_coeffs2d,
+    bench_spleen_coeffs2d_persistent,
+    bench_interpn_coeffs2d_persistent,
 );
 criterion_main!(benches);
