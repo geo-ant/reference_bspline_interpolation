@@ -10,6 +10,8 @@ use spleen::{
     inplace::{coefficients2d, coefficients2d_blocked},
 };
 
+const COL_BLOCKSIZE: usize = 8;
+const ROW_BLOCKSIZE: usize = 8;
 // stride = 1, varying number of samples
 const SIZES: [i32; 6] = [64, 256, 1024, 4096, 16384, 65535];
 
@@ -279,8 +281,6 @@ fn bench_spleen_coeffs2d(c: &mut Criterion) {
             },
         );
 
-        const BLOCKSIZE: usize = 8;
-
         group.bench_with_input(
             BenchmarkId::new("spleen-blocked", format!("{n}x{n}")),
             &image,
@@ -288,7 +288,7 @@ fn bench_spleen_coeffs2d(c: &mut Criterion) {
                 b.iter_batched_ref(
                     || image.clone(),
                     |mut buf| {
-                        coefficients2d_blocked::<_, _, BLOCKSIZE>(
+                        coefficients2d_blocked::<_, _, ROW_BLOCKSIZE, COL_BLOCKSIZE>(
                             BSpline3::<f64>::default(),
                             criterion::black_box(&mut buf),
                             n as usize,
@@ -466,7 +466,7 @@ fn bench_spleen_coeffs2d_persistent(c: &mut Criterion) {
                         |_| {
                             let mut work = work.borrow_mut();
 
-                            coefficients2d_blocked::<_, _, 8>(
+                            coefficients2d_blocked::<_, _, ROW_BLOCKSIZE, COL_BLOCKSIZE>(
                                 BSpline3::<f64>::default(),
                                 criterion::black_box(work.as_mut_slice()),
                                 n as usize,
