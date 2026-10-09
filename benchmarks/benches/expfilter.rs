@@ -5,8 +5,8 @@ use std::{cell::RefCell, num::NonZero};
 
 use benchmarks::{BoundaryExtension, apply_expfilter, splinter_coefficients2d_inplace};
 use spleen::{
-    TransmittableBoundaryExtension as SpleenBoundaryExtension,
     bspline::BSpline3,
+    inplace::TransmittableBoundaryExtension as SpleenBoundaryExtension,
     inplace::{coefficients2d, coefficients2d_blocked},
 };
 
